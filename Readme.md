@@ -1,8 +1,8 @@
 # 📸 MyKisah - PLATFORM CERITA BRUTALMU!
 
-> "Karena setiap kisah pantas untuk MELEDAK!"
+> "MyKisah - Karena setiap kisahmu layak untuk dikenang! 📸✨","
 
-Sebuah Progressive Web App (PWA) yang dirancang dengan gaya neo-brutalist untuk membuat pengalaman berbagi ceritamu menjadi LEBIH EKSPRESIF!
+Sebuah Progressive Web App (PWA) yang dirancang dengan gaya neo-brutalist untuk membuat pengalaman berbagi ceritamu menjadi lebih berkesan!
 
 ## 🚀 Fitur BRUTAL
 
