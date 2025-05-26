@@ -66,37 +66,37 @@
   ],
     "screenshots": [
     {
-      "src": "images/screenshots/CeritaKuyApp_001.png",
+      "src": "images/screenshots/01.png",
       "sizes": "1920x1043",
       "type": "image/png",
       "form_factor": "wide"
     },
     {
-      "src": "images/screenshots/CeritaKuyApp_002.png",
+      "src": "images/screenshots/02.png",
       "sizes": "1920x1043",
       "type": "image/png",
       "form_factor": "wide"
     },
     {
-      "src": "images/screenshots/CeritaKuyApp_003.png",
+      "src": "images/screenshots/03.png",
       "sizes": "1920x1043",
       "type": "image/png",
       "form_factor": "wide"
     },
     {
-      "src": "images/screenshots/CeritaKuyApp_004.png",
+      "src": "images/screenshots/04.png",
       "sizes": "1080x2280",
       "type": "image/png",
       "form_factor": "narrow"
     },
     {
-      "src": "images/screenshots/CeritaKuyApp_005.png",
+      "src": "images/screenshots/05.png",
       "sizes": "1080x2280",
       "type": "image/png",
       "form_factor": "narrow"
     },
     {
-      "src": "images/screenshots/CeritaKuyApp_006.png",
+      "src": "images/screenshots/06.png",
       "sizes": "1080x2280",
       "type": "image/png",
       "form_factor": "narrow"
