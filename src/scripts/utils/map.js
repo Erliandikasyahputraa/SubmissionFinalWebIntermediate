@@ -22,54 +22,79 @@ export default class Map {
     });
   }
 
-  static async build(selector, options = {}) {
-    if ('center' in options && options.center) {
-      return new Map(selector, options);
-    }
- 
-    const jakartaCoordinate = [-6.2, 106.816666];
- 
-    if ('locate' in options && options.locate) {
-      try {
-        const position = await Map.getCurrentPosition();
-        const coordinate = [position.coords.latitude, position.coords.longitude];
- 
-        return new Map(selector, {
-          ...options,
-          center: coordinate,
-        });
-      } catch (error) {
-        console.error('build: error:', error);
- 
-        return new Map(selector, {
-          ...options,
-          center: jakartaCoordinate,
-        });
-      }
-    }
- 
-    return new Map(selector, {
-      ...options,
-      center: jakartaCoordinate,
-    });
-  }
- 
   constructor(selector, options = {}) {
+    if (!selector) {
+      throw new Error('Map selector is required');
+    }
+
+    const container = document.querySelector(selector);
+    if (!container) {
+      throw new Error(`Map container not found for selector: ${selector}`);
+    }
+
+    // Wait for container to be properly mounted in DOM
+    if (!container.offsetWidth || !container.offsetHeight) {
+      throw new Error('Map container has no dimensions. Ensure the container is visible and has dimensions.');
+    }
+
     this.#zoom = options.zoom ?? this.#zoom;
- 
+
     const tileOsm = tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
     });
- 
-    this.#map = map(document.querySelector(selector), {
-      zoom: this.#zoom,
-      scrollWheelZoom: false,
-      layers: [tileOsm],
-      ...options,
-    });
+
+    try {
+      this.#map = map(container, {
+        zoom: this.#zoom,
+        scrollWheelZoom: false,
+        layers: [tileOsm],
+        ...options,
+      });
+    } catch (error) {
+      console.error('Failed to initialize map:', error);
+      throw new Error('Map initialization failed. Please ensure the container is properly rendered.');
+    }
   }
 
+  static async build(selector, options = {}) {
+    const maxRetries = 3;
+    let retryCount = 0;
+    let lastError;
+
+    while (retryCount < maxRetries) {
+      try {
+        if ('center' in options && options.center) {
+          return new Map(selector, options);
+        }
+
+        const jakartaCoordinate = [-6.2, 106.816666];
+
+        if ('locate' in options && options.locate) {
+          try {
+            const position = await Map.getCurrentPosition();
+            const coordinate = [position.coords.latitude, position.coords.longitude];
+            return new Map(selector, { ...options, center: coordinate });
+          } catch (error) {
+            console.warn('Geolocation failed, using default coordinates:', error);
+            return new Map(selector, { ...options, center: jakartaCoordinate });
+          }
+        }
+
+        return new Map(selector, { ...options, center: jakartaCoordinate });
+      } catch (error) {
+        lastError = error;
+        retryCount++;
+        if (retryCount < maxRetries) {
+          // Wait briefly before retrying
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+    }
+
+    throw lastError || new Error('Failed to initialize map after multiple attempts');
+  }
+ 
   createIcon(options = {}) {
     return icon({
       ...Icon.Default.prototype.options,

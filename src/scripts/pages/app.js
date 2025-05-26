@@ -93,10 +93,17 @@ export default class App {
   }
 
     async #setupPushNotification() {
-    const pushNotificationTools = document.getElementById('push-notification-tools');
-    const isSubscribed = await isCurrentPushSubscriptionAvailable();
+  try {
+    const registration = await this._registerServiceWorker();
+    if (!registration) {
+      console.warn('Service Worker registration failed');
+      return;
+    }
 
-    if (isSubscribed) {
+    const subscriptionExists = await isCurrentPushSubscriptionAvailable(registration);
+
+    const pushNotificationTools = document.getElementById('push-notification-tools');
+    if (subscriptionExists) {
       pushNotificationTools.innerHTML = generateUnsubscribeButtonTemplate();
         document.getElementById('unsubscribe-button').addEventListener('click', () => {
         unsubscribe().finally(() => {
@@ -112,7 +119,10 @@ export default class App {
         this.#setupPushNotification();
       });
     });
+  } catch (error) {
+    console.error('Failed to setup push notification:', error);
   }
+}
 
   async renderPage() {
     const url = getActiveRoute();

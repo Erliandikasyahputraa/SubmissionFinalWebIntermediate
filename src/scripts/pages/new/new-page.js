@@ -121,14 +121,45 @@ Buat kisahmu MELEDAK dengan detail yang BRUTAL!"
 
   #setupForm() {
     this.#form = document.getElementById('new-form');
+    let uploadInProgress = false;
+
+    // Handle form cancel
+    document.querySelector('a[href="#/"]').addEventListener('click', (e) => {
+      if (uploadInProgress) {
+        e.preventDefault();
+        if (confirm('Upload sedang berlangsung. Anda yakin ingin membatalkan?')) {
+          uploadInProgress = false;
+          location.hash = '/';
+        }
+      }
+    });
+
     this.#form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const data = this.#collectFormData();
-      await this.#presenter.postNewStory(data);
+      if (uploadInProgress) return;
+      
+      try {
+        uploadInProgress = true;
+        const data = this.#collectFormData();
+        await this.#presenter.postNewStory(data);
+      } finally {
+        uploadInProgress = false;
+      }
     });
 
     document.getElementById('documentations-input').addEventListener('change', async (event) => {
-      await this.#handleFileInput(event.target.files);
+      const files = event.target.files;
+      if (files.length > 0) {
+        const fileSize = files[0].size;
+        const MAX_FILE_SIZE = 1000000; // 1MB
+        
+        if (fileSize > MAX_FILE_SIZE) {
+          alert('Ukuran file terlalu besar. Maksimal 1MB');
+          event.target.value = ''; // Clear the input
+          return;
+        }
+      }
+      await this.#handleFileInput(files);
     });
 
     document.getElementById('documentations-input-button').addEventListener('click', () => {
@@ -144,32 +175,34 @@ Buat kisahmu MELEDAK dengan detail yang BRUTAL!"
   }
 
   async initialMap() {
+    // Wait for map container to be ready
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) {
+      throw new Error('Map container not found');
+    }
+
     const lat = parseFloat(this.#form.elements.namedItem('lat').value);
     const lon = parseFloat(this.#form.elements.namedItem('lon').value);
-  
-    // Membuat peta dan mengatur titik awal
-    const map = L.map('map').setView([lat, lon], 13);
-  
-    // Menambahkan tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
-  
-    // Membuat ikon kustom dari file gambar lokal
-    const customIcon = L.icon({
-      iconUrl: '/marker-icon-2x.png', // Path relatif ke folder public
-      iconSize: [32, 32], // Ukuran ikon
-      iconAnchor: [16, 32], // Titik jangkar ikon (di mana posisi marker akan berada)
-      popupAnchor: [0, -32], // Posisi popup relatif terhadap ikon
+
+    // Create map instance after container is confirmed to exist
+    const map = new Map('#map', {
+      center: [lat, lon],
+      zoom: 13,
     });
-  
-    // Menambahkan marker dengan ikon kustom yang dapat digerakkan
-    const marker = L.marker([lat, lon], {
+
+    const customIcon = map.createIcon({
+      iconUrl: '/marker-icon-2x.png',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -32],
+    });
+
+    const marker = map.addMarker([lat, lon], {
       draggable: true,
-      icon: customIcon, // Menggunakan ikon kustom
-    }).addTo(map);
-  
-    // Memperbarui input lat dan lon saat marker dipindah
+      icon: customIcon,
+    });
+
+    // Update coordinates when marker is moved
     marker.on('move', (event) => {
       const latLng = event.target.getLatLng();
       this.#form.elements.namedItem('lat').value = latLng.lat;
@@ -218,11 +251,59 @@ Buat kisahmu MELEDAK dengan detail yang BRUTAL!"
 }
 
   async #handleFileInput(files) {
-    const insertingPicturesPromises = Object.values(files).map(async (file) => {
-      return await this.#addTakenPicture(file);
-    });
-    await Promise.all(insertingPicturesPromises);
-    await this.#populateTakenPictures();
+    const MAX_FILE_SIZE = 1000000; // 1MB
+    
+    try {
+      this.showUploadLoading();
+      
+      // Compress image before adding to taken pictures
+      const compressImage = async (file) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = (e) => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              const maxWidth = 800;
+              let width = img.width;
+              let height = img.height;
+              
+              if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              }
+              
+              canvas.width = width;
+              canvas.height = height;
+              ctx.drawImage(img, 0, 0, width, height);
+              
+              canvas.toBlob((blob) => {
+                resolve(blob);
+              }, 'image/jpeg', 0.7);
+            };
+          };
+          reader.onerror = reject;
+        });
+      };
+
+      for (const file of files) {
+        if (file.size > MAX_FILE_SIZE) {
+          alert(`File ${file.name} terlalu besar. Maksimal ukuran file adalah 1MB`);
+          continue;
+        }
+        const compressedImage = await compressImage(file);
+        await this.#addTakenPicture(compressedImage);
+      }
+    } catch (error) {
+      console.error('Error handling files:', error);
+      alert('Gagal memproses gambar');
+    } finally {
+      this.hideUploadLoading();
+      await this.#populateTakenPictures();
+    }
   }
 
   async #addTakenPicture(image) {
@@ -301,5 +382,17 @@ Buat kisahmu MELEDAK dengan detail yang BRUTAL!"
     document.getElementById('submit-button-container').innerHTML = `
       <button class="btn" type="submit">Buat Cerita</button>
     `;
+  }
+
+  showUploadLoading() {
+    const loadingEl = document.createElement('div');
+    loadingEl.id = 'upload-loading';
+    loadingEl.innerHTML = '<div class="loader">Memproses gambar...</div>';
+    document.querySelector('.new-form__documentations__container').appendChild(loadingEl);
+  }
+
+  hideUploadLoading() {
+    const loadingEl = document.getElementById('upload-loading');
+    if (loadingEl) loadingEl.remove();
   }
 }

@@ -3,6 +3,7 @@ import { isNotificationGranted, isCurrentPushSubscriptionAvailable } from '../..
 export default class NewPresenter {
   #view;
   #model;
+  #isUploading = false;
 
   constructor({ view, model }) {
     this.#view = view;
@@ -21,8 +22,20 @@ export default class NewPresenter {
   }
 
   async postNewStory({ description, photo, lat, lon }) {
+    if (this.#isUploading) return;
+    this.#isUploading = true;
+
     this.#view.showSubmitLoadingButton();
     try {
+      // Validate and compress image if needed
+      const MAX_FILE_SIZE = 1000000; // 1MB in bytes
+      if (photo && photo.length > 0) {
+        const imageFile = photo[0];
+        if (imageFile.size > MAX_FILE_SIZE) {
+          throw new Error('Ukuran gambar terlalu besar (maksimal 1MB)');
+        }
+      }
+
       const data = {
         description: description,
         photo: photo,
@@ -36,6 +49,8 @@ export default class NewPresenter {
         this.#view.storeFailed(response.message);
         return;
       }
+
+      this.#view.storeSuccessfully('Cerita berhasil dibuat!', response.data);
 
       // Cek apakah notifikasi diizinkan dan langganan push TIDAK aktif
       const isNotificationAllowed = isNotificationGranted();
@@ -62,12 +77,11 @@ export default class NewPresenter {
         // Fallback ke alert jika notifikasi tidak tersedia atau pengguna sudah berlangganan
         alert(`Story berhasil dibuat: ${description}`);
       }
-
-      this.#view.storeSuccessfully(response.message, response.data);
     } catch (error) {
       console.error('postNewStory: error:', error);
-      this.#view.storeFailed(error.message);
+      this.#view.storeFailed(error.message || 'Gagal mengupload cerita. Pastikan ukuran foto tidak melebihi 1MB');
     } finally {
+      this.#isUploading = false;
       this.#view.hideSubmitLoadingButton();
     }
   }

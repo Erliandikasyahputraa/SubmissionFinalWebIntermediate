@@ -35,13 +35,41 @@ export async function requestNotificationPermission() {
   return true;
 }
  
+const getPushSubscriptionFromRegistration = async (registration) => {
+  if (!registration) {
+    throw new Error('Service Worker registration is not found');
+  }
+
+  if (!registration.pushManager) {
+    throw new Error('Push Notification is not supported');
+  }
+
+  return registration.pushManager.getSubscription();
+};
+
 export async function getPushSubscription() {
   const registration = await navigator.serviceWorker.getRegistration();
-  return await registration.pushManager.getSubscription();
+  return await getPushSubscriptionFromRegistration(registration);
 }
- 
+
+const checkPushSubscriptionAvailable = async (registration) => {
+  try {
+    const subscription = await getPushSubscriptionFromRegistration(registration);
+    return !!subscription;
+  } catch (error) {
+    console.error('Error checking push subscription:', error);
+    return false;
+  }
+};
+
 export async function isCurrentPushSubscriptionAvailable() {
-  return !!(await getPushSubscription());
+  const registration = await navigator.serviceWorker.getRegistration();
+  try {
+    return await checkPushSubscriptionAvailable(registration);
+  } catch (error) {
+    console.error('Error checking current push subscription:', error);
+    return false;
+  }
 }
 
 export function generateSubscribeOptions() {
