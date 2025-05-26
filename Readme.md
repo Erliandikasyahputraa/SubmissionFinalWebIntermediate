@@ -1,6 +1,6 @@
 # 📸 MyKisah - PLATFORM CERITA BRUTALMU!
 
-> "MyKisah - Karena setiap kisahmu layak untuk dikenang! 📸✨","
+> "Karena setiap kisahmu layak untuk dikenang! 📸✨","
 
 Sebuah Progressive Web App (PWA) yang dirancang dengan gaya neo-brutalist untuk membuat pengalaman berbagi ceritamu menjadi lebih berkesan!
 
